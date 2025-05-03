@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\ContactService;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class ContactController extends Controller
 {
@@ -26,9 +28,34 @@ class ContactController extends Controller
      */
     public function index()
     {
+        // Get all contacts from the service
         $contacts = $this->contactService->getAllContacts();
         
-        return view('contacts.index', compact('contacts'));
+        // Number of items per page
+        $perPage = 10;
+        
+        // Convert array to collection if it's not already
+        $contactsCollection = collect($contacts);
+        
+        // Get current page from request
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        
+        // Slice the collection to get the items to display in current page
+        $currentPageItems = $contactsCollection->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        
+        // Create our paginator
+        $paginatedContacts = new LengthAwarePaginator(
+            $currentPageItems,
+            $contactsCollection->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'page',
+            ]
+        );
+        
+        return view('contacts.index', ['contacts' => $paginatedContacts]);
     }
 
     /**
